@@ -680,7 +680,8 @@ jobs:
   # bypass it.
   npu-gate:
     if: >-
-      ${{ !(github.event_name == 'schedule'
+      ${{ (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
+           && !(github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
            || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
@@ -730,7 +731,8 @@ jobs:
   npu-approve:
     needs: [changes, npu-gate]
     if: >-
-      needs.npu-gate.outputs.trusted != 'true'
+      (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
+      && needs.npu-gate.outputs.trusted != 'true'
       && ((needs.changes.outputs.run == 'true'
            && (needs.changes.outputs.suites != 'none'
                || needs.changes.outputs.hrx-suites != ''
@@ -972,7 +974,7 @@ jobs:
     # npu-approve is skipped for trusted ones, so spell out what the implicit
     # success() check would require.
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1028,7 +1030,7 @@ jobs:
     needs: [changes, devkit-stage, build-lin-hrx-portable, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1073,7 +1075,7 @@ jobs:
     needs: [changes, build-lin-source-portable, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1112,7 +1114,7 @@ jobs:
     needs: [changes, build-lin-xrt-portable, build-lin-extension-xrt, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1158,7 +1160,7 @@ jobs:
     needs: [changes, build-lin-hrx-portable, build-lin-extension-hrx, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1212,7 +1214,7 @@ jobs:
     needs: [changes, build-lin-xrt-deb, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1255,7 +1257,7 @@ jobs:
     needs: [changes, build-lin-hrx-deb, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1300,7 +1302,7 @@ jobs:
     needs: [changes, devkit-stage, build-win-xrt, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1442,7 +1444,7 @@ jobs:
     needs: [changes, devkit-stage, build-win-hrx, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1485,7 +1487,7 @@ jobs:
     needs: [changes, build-win-source, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1524,7 +1526,7 @@ jobs:
     needs: [changes, build-win-xrt, build-win-extension-xrt, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1570,7 +1572,7 @@ jobs:
     needs: [changes, build-win-hrx, build-win-extension-hrx, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1616,7 +1618,7 @@ jobs:
     needs: [changes, build-win-xrt, npu-gate, npu-approve]
     # Self-hosted: gated as test-lin-xrt-portable (see npu-gate).
     if: >-
-      ${{ !cancelled()
+      ${{ !cancelled() && (github.repository == 'ROCm/FastFlowLM' || vars.ENABLE_SELF_HOSTED_RUNNERS == 'true')
       && ((github.event_name == 'schedule'
            || (github.event_name == 'push'
                && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
@@ -1873,16 +1875,19 @@ jobs:
           HRX_OK: ${{ steps.verdict.outputs.hrx }}
           RUN: ${{ needs.changes.outputs.run }}
           STAGED: ${{ needs.devkit-stage.outputs.staged }}
+          ENABLE_SELF_HOSTED: ${{ vars.ENABLE_SELF_HOSTED_RUNNERS }}
         run: |
           echo "npu-gate: ${GATE} (trusted: ${TRUSTED}); npu-approve: ${APPROVE}; xrt: ${XRT_OK}; hrx: ${HRX_OK}"
-          case "${GATE}" in success) ;; *) echo "::error::npu-gate did not succeed"; exit 1 ;; esac
-          # A missing approval fails only when some NPU job needed it: a
-          # dev-kit pull request that staged nothing runs none (npu-approve
-          # asks before that is known). Dev-kit checks fails a staged run
-          # whose test jobs the gate held.
-          if [ "${TRUSTED}" != true ] && [ "${APPROVE}" != success ] && [ "${APPROVE}" != skipped ] \
-             && { [ "${RUN}" = true ] || [ "${STAGED}" = true ]; }; then
-            echo "::error::NPU tests were not approved"; exit 1
+          if [ "${GITHUB_REPOSITORY}" = "ROCm/FastFlowLM" ] || [ "${ENABLE_SELF_HOSTED}" = "true" ]; then
+            case "${GATE}" in success) ;; *) echo "::error::npu-gate did not succeed"; exit 1 ;; esac
+            # A missing approval fails only when some NPU job needed it: a
+            # dev-kit pull request that staged nothing runs none (npu-approve
+            # asks before that is known). Dev-kit checks fails a staged run
+            # whose test jobs the gate held.
+            if [ "${TRUSTED}" != true ] && [ "${APPROVE}" != success ] && [ "${APPROVE}" != skipped ] \
+               && { [ "${RUN}" = true ] || [ "${STAGED}" = true ]; }; then
+              echo "::error::NPU tests were not approved"; exit 1
+            fi
           fi
           if [ "${XRT_OK}" != true ] || [ "${HRX_OK}" != true ]; then
             echo "::error::a package failed to build or its tests failed"; exit 1
@@ -1910,6 +1915,7 @@ jobs:
       - name: Dev-kit checks
         if: ${{ !cancelled() && (github.event_name == 'pull_request' || needs.changes.outputs.devkit-full-refresh == 'true') }}
         env:
+          ENABLE_SELF_HOSTED: ${{ vars.ENABLE_SELF_HOSTED_RUNNERS }}
           CHANGES: ${{ needs.changes.result }}
           SWAP_VERIFIED: ${{ needs.changes.outputs.swap-verified }}
           BINARIES: ${{ needs.changes.outputs.binaries-check }}
@@ -1954,7 +1960,10 @@ jobs:
               job="${entry%%=*}"; result="${entry#*=}"
               case "${result}" in
                 success) ;;
-                skipped) echo "::error::${job} was skipped though dev-kit files were staged into its package (a build failed, or the NPU gate held it)"; rc=1 ;;
+                skipped)
+                  if [ "${GITHUB_REPOSITORY}" = "ROCm/FastFlowLM" ] || [ "${ENABLE_SELF_HOSTED:-false}" = "true" ]; then
+                    echo "::error::${job} was skipped though dev-kit files were staged into its package (a build failed, or the NPU gate held it)"; rc=1
+                  fi ;;
                 *) echo "::error::${job} did not pass (${result})"; rc=1 ;;
               esac
             done
