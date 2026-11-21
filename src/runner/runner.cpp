@@ -8,6 +8,7 @@
 */
 #include "runner.hpp"
 #include "harmony_filter.hpp"
+#include "think_filter.hpp"
 #ifndef FASTFLOWLM_LINUX_LIMITED_MODELS
 #include "AutoEmbeddingModel/all_embedding_model.hpp"
 #endif
@@ -385,11 +386,21 @@ void Runner::run() {
 
             this->auto_chat_engine->stop_ttft_timer();
             
-            // Use harmony filter for gpt-oss models
+            // Use harmony filter for gpt-oss models, or think filter for models with thinking enabled
             if (this->auto_chat_engine->get_current_model().find("gpt-oss") != std::string::npos) { // contains gpt-oss:20b and gpt-oss
                 cli_harmony_filter harmony_filter_ostream(std::cout);
                 try {
                     this->auto_chat_engine->generate(meta_info, this->generate_limit, harmony_filter_ostream);
+                }
+                catch (const std::exception& e) {
+                    header_print("ERROR", "Generation error: " + std::string(e.what()));
+                    this->auto_chat_engine->clear_context();
+                    continue;
+                }
+            } else if (this->auto_chat_engine->thinking_enabled()) {
+                cli_think_filter think_filter_ostream(std::cout, true);
+                try {
+                    this->auto_chat_engine->generate(meta_info, this->generate_limit, think_filter_ostream);
                 }
                 catch (const std::exception& e) {
                     header_print("ERROR", "Generation error: " + std::string(e.what()));

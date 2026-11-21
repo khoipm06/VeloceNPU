@@ -6,12 +6,14 @@
 #include "AutoModel/automodel.hpp"
 #include "image/image_reader.hpp"
 #include "audio/audio_reader.hpp"
+#include "aie2_silicon_accelerator.hpp"
 
 /************              LFM3 family            **************/
 class LFM3 : public AutoModel {
 private:
     /// the template opens a reasoning block (`<think>`) by default; turning it off renders `<think></think>`
     bool enable_think = true;
+    aie2_silicon_accelerator aie2_accel;
 
     void setup_tokenizer(std::string model_path);
 

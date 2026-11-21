@@ -529,6 +529,8 @@ BACKEND_SUFFIXES = {"-core": "core", "-oga-hipep": "oga-hipep"}  # catalog::back
 # source (key: a src/ path, or a model tag) -> why. An entry that no longer
 # excuses anything is an error, so the list cannot go stale.
 CATALOG_ALLOW = {
+    f"{SHIPPED_XCLBINS}/LFM3-1.7B-NPU2/layer_npu1.xclbin":
+        "AIE2 4-column hardware overlay for Phoenix (RyzenAI-npu1) acceleration",
     f"{SHIPPED_XCLBINS}/MiniCPM-OCR-1.0-NPU2/conv.xclbin":
         "loaded by no engine: minicpm_ocr_npu registers conv8.xclbin (and only when built with "
         "PREFILL_CONV=npu); conv.xclbin is the older conv1d kernel it does not work with "

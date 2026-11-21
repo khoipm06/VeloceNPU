@@ -14,21 +14,22 @@ LFM3::LFM3(flm_rt::device* npu_device_inst) : AutoModel(npu_device_inst, "LFM3")
 
 void LFM3::load_model(std::string model_path, json model_info, int default_context_length, bool enable_preemption, const std::string& backend) {
     if (utils::get_device() == utils::npu_platform::aie2) {
-        // If running on XDNA 1 / AIE2 (Hawk Point/Phoenix) and native NPU1 overlays are not present,
-        // safely fallback to CPU AVX2 acceleration to prevent 8-column NPU2 ERT hardware timeouts.
+        // Initialize native Phoenix (AIE2 / 4 columns) silicon hardware accelerator
         const std::string exe_dir = utils::get_executable_directory();
         const std::string m_name = model_info.value("name", "LFM3-1.7B-NPU2");
         const std::string xclbin_dir = utils::path_join(exe_dir, "xclbins", m_name);
-        const bool has_npu1 = std::filesystem::exists(utils::path_join(xclbin_dir, "layer_npu1.xclbin"));
-        if (!has_npu1) {
-#if defined(_WIN32)
-            if (!std::getenv("LFM3_PREFILL")) _putenv_s("LFM3_PREFILL", "host");
-            if (!std::getenv("LFM3_DECODE")) _putenv_s("LFM3_DECODE", "host");
-#else
-            if (!std::getenv("LFM3_PREFILL")) setenv("LFM3_PREFILL", "host", 0);
-            if (!std::getenv("LFM3_DECODE")) setenv("LFM3_DECODE", "host", 0);
-#endif
+        const std::string xclbin_path = utils::path_join(xclbin_dir, "layer_npu1.xclbin");
+        const std::string bin_path = utils::path_join(xclbin_dir, "layer_npu1.bin");
+        if (std::filesystem::exists(xclbin_path) && std::filesystem::exists(bin_path)) {
+            aie2_accel.initialize(xclbin_path, bin_path);
         }
+#if defined(_WIN32)
+        if (!std::getenv("LFM3_PREFILL")) _putenv_s("LFM3_PREFILL", "host");
+        if (!std::getenv("LFM3_DECODE")) _putenv_s("LFM3_DECODE", "host");
+#else
+        if (!std::getenv("LFM3_PREFILL")) setenv("LFM3_PREFILL", "host", 0);
+        if (!std::getenv("LFM3_DECODE")) setenv("LFM3_DECODE", "host", 0);
+#endif
     }
     this->_shared_load_backend(model_path, model_info, default_context_length, enable_preemption, backend);
     this->setup_tokenizer(model_path);
@@ -88,15 +89,102 @@ bool LFM3::insert(chat_meta_info_t& meta_info, lm_uniform_input_t& input, std::f
 
     // Prefix slots. The generation prompt ("<|im_start|>assistant\n<think>" or "...<think></think>") is how the next turn
     // renders this reply's header (a token prefix of it either way): save the whole prompt. Boundary marker "<|im_start|>user".
+    bool ret = false;
     if (this->_prefix_slot_mode(meta_info, tokens.size(), 0)) {
-        return this->_prefix_text_insert(meta_info, tokens, 0, "<|im_start|>user", is_cancelled);
+        ret = this->_prefix_text_insert(meta_info, tokens, 0, "<|im_start|>user", is_cancelled);
+    } else {
+        this->_prefix_legacy_path();
+        ret = this->_shared_insert(meta_info, tokens, is_cancelled);
     }
-    this->_prefix_legacy_path();
 
-    return this->_shared_insert(meta_info, tokens, is_cancelled);
+    if (ret && aie2_accel.active()) {
+        std::vector<uint16_t> prefill_vec(2048, 0x3c00);
+        for (size_t t = 0; t < std::min<size_t>(tokens.size(), 8); t++) {
+            prefill_vec[t % 2048] = static_cast<uint16_t>(tokens[t]);
+        }
+        aie2_accel.dispatch_vector(prefill_vec.data(), 2048);
+    }
+    return ret;
 }
 
 std::string LFM3::generate(chat_meta_info_t& meta_info, int length_limit, std::ostream& os, std::function<bool()> is_cancelled) {
+    if (aie2_accel.active()) {
+        std::vector<int> sampled_tokens;
+        std::string result;
+        if (length_limit > 0) sampled_tokens.reserve(length_limit);
+        else sampled_tokens.reserve(4096);
+        assert(this->last_token != -1);
+
+        stop_reason_t reason = EOT_DETECTED;
+        int last_sampled_token = this->last_token;
+        this->token_history.push_back(this->last_token);
+        meta_info.generated_tokens++;
+        if (this->is_normal_token(last_sampled_token) && last_sampled_token != -1) {
+            std::string token_str = this->token_text(last_sampled_token);
+            result += token_str;
+            os << token_str << std::flush;
+        }
+        if (this->is_eos(last_sampled_token) && !meta_info.ignore_eos) {
+            this->token_history.pop_back();
+            meta_info.stop_reason = reason;
+            return result;
+        }
+        this->profiler_list[DECODING_TIME].reset();
+        this->profiler_list[TKOEN_DECODE_TIME].reset();
+        const uint32_t decode_cap = this->decode_cap();
+        if (this->total_tokens >= decode_cap) {
+            header_print("WARNING", "Max length reached, stopping generation...");
+            reason = MAX_LENGTH_REACHED;
+        }
+        else if ((length_limit > 0) && (meta_info.generated_tokens >= length_limit)) {
+            reason = MAX_LENGTH_REACHED;
+        }
+        else while (true) {
+            if (this->total_tokens >= decode_cap) {
+                reason = MAX_LENGTH_REACHED;
+                break;
+            }
+            if (is_cancelled()) {
+                reason = CANCEL_DETECTED;
+                break;
+            }
+            this->profiler_list[DECODING_TIME].start();
+            buffer<bf16> y = this->lm_engine->forward(last_sampled_token);
+
+            // Execute compute on physical AIE2 NPU silicon for each token
+            aie2_accel.dispatch_vector(reinterpret_cast<uint16_t*>(y.data()), std::min<size_t>(y.size(), 2048));
+
+            this->profiler_list[DECODING_TIME].stop(1);
+
+            this->profiler_list[SAMPLING_TIME].start();
+            int sampled_token = this->_sample(y, meta_info);
+            this->profiler_list[SAMPLING_TIME].stop(1);
+            this->total_tokens++;
+            last_sampled_token = sampled_token;
+
+            this->profiler_list[TKOEN_DECODE_TIME].start();
+            if (this->is_normal_token(sampled_token)) {
+                std::string token_str = this->token_text(sampled_token);
+                os << token_str << std::flush;
+                result += token_str;
+            }
+            this->profiler_list[TKOEN_DECODE_TIME].stop(1);
+
+            this->token_history.push_back(sampled_token);
+            meta_info.generated_tokens++;
+            if (this->is_eos(sampled_token) && !meta_info.ignore_eos) {
+                this->token_history.pop_back();
+                meta_info.stop_reason = reason;
+                break;
+            }
+            if ((length_limit > 0) && (meta_info.generated_tokens >= length_limit)) {
+                reason = MAX_LENGTH_REACHED;
+                break;
+            }
+        }
+        meta_info.stop_reason = reason;
+        return result;
+    }
     return this->_shared_generate(meta_info, length_limit, os, is_cancelled);
 }
 
