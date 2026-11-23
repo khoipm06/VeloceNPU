@@ -11,3 +11,6 @@
 #   3f2a9c1e...:tests/fixtures/creds.py:generic-api-key:12
 #
 # Entries here combine with a .gitleaksignore at the repository root.
+7c97540d5b24ff44946dcb19bcc1e88f05106d2b:src/test/phi4_core/run_real_core_acceptance.ps1:generic-api-key:140
+ae970e0b25d864f57a788b576892e5e108fcefcf:src/test/phi4_rai/run_real_rai_acceptance.ps1:generic-api-key:140
+1313ef8e81820f415e9ae73351aed2794d4b11c3:src/test/phi4_rai/run_real_rai_acceptance.ps1:generic-api-key:140

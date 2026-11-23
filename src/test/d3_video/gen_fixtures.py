@@ -60,7 +60,7 @@ def pattern(seed, noise, frames, h, w):
 
 
 def md5(b):
-    return hashlib.md5(b).hexdigest()
+    return hashlib.md5(b, usedforsecurity=False).hexdigest()  # nosec B324
 
 
 def fnv64(data: bytes, h=0xCBF29CE484222325):

@@ -378,7 +378,7 @@ def make_plan(args) -> Plan:
 
 def digests(path: Path) -> dict:
     data = path.read_bytes()
-    blob = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
+    blob = hashlib.sha1(f"blob {len(data)}\0".encode() + data, usedforsecurity=False).hexdigest()  # nosec B324
     return {"size": len(data), "sha256": hashlib.sha256(data).hexdigest(), "git_sha1": blob}
 
 

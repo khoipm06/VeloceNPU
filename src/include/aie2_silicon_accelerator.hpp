@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <chrono>
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(FLM_USE_HRX)
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_bo.h"
 #include "xrt/xrt_kernel.h"
@@ -23,7 +23,7 @@
 class aie2_silicon_accelerator {
 private:
     bool is_initialized = false;
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(FLM_USE_HRX)
     std::unique_ptr<xrt::device> device;
     std::unique_ptr<xrt::hw_context> context;
     std::unique_ptr<xrt::kernel> kernel;
@@ -40,7 +40,7 @@ public:
     }
 
     void shutdown() {
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(FLM_USE_HRX)
         if (is_initialized) {
             bo_out.reset();
             bo_in.reset();
@@ -54,7 +54,7 @@ public:
     }
 
     bool initialize(const std::string& xclbin_path, const std::string& insts_path) {
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(FLM_USE_HRX)
         try {
             if (!std::filesystem::exists(xclbin_path) || !std::filesystem::exists(insts_path)) {
                 return false;
@@ -95,7 +95,7 @@ public:
     }
 
     void dispatch_vector(uint16_t* inout, size_t count = VECTOR_SIZE) {
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(FLM_USE_HRX)
         if (!is_initialized || !kernel || !bo_in || !bo_out || !bo_instr) return;
         try {
             size_t sz = std::min(count, VECTOR_SIZE) * sizeof(uint16_t);
